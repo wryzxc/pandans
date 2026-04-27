@@ -1,13 +1,25 @@
 {
   "name": "pandaslab",
-  "private": true,
-  "version": "0.0.0",
+  "private": false,
+  "version": "1.0.0",
+  "description": "Interactive Pandas Data Analysis Training Platform",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "version": "node scripts/version.js",
+    "release": "node scripts/version.js patch && git add package.json CHANGELOG.md && git commit -m \"chore(release): bump version\" && git tag v$(node -p \"require('./package.json').version\")",
+    "lint": "vue-tsc --noEmit"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wryzxc/pandans.git"
+  },
+  "bugs": {
+    "url": "https://github.com/wryzxc/pandans/issues"
+  },
+  "homepage": "https://wryzxc.github.io/pandans",
   "dependencies": {
     "@codemirror/basic-setup": "^0.20.0",
     "@codemirror/lang-python": "^6.2.1",

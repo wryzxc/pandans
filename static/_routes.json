@@ -1,0 +1,9 @@
+# GitHub Pages SPA Routing Configuration
+# This file tells Cloudflare Pages / GitHub Pages to route all requests to index.html
+# Required for Vue Router history mode to work properly
+
+# GitHub Pages automatically handles SPA routing when you upload index.html
+# as 404.html (which our deploy workflow does)
+
+# For additional static file rules, uncomment below:
+# /*    /index.html   200

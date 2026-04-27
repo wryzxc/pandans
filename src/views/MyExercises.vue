@@ -70,27 +70,49 @@ function formatDate(dateStr) {
 <template>
   <div class="exercises-page">
     <div class="page-header">
-      <h1>我的练习</h1>
-      <p>查看你的学习进度，快速继续编写代码</p>
+      <div class="container">
+        <h1 class="page-title">我的练习</h1>
+        <p class="page-subtitle">查看你的学习进度，快速继续编写代码</p>
+      </div>
     </div>
 
     <div class="container">
-      <div class="stats-bar">
+      <div class="stats-grid">
         <div class="stat-card">
-          <span class="stat-value">{{ stats.total }}</span>
-          <span class="stat-label">总项目</span>
+          <div class="stat-icon-wrapper total">
+            <span class="stat-icon"></span>
+          </div>
+          <div class="stat-info">
+            <span class="stat-value">{{ stats.total }}</span>
+            <span class="stat-label">总项目</span>
+          </div>
         </div>
         <div class="stat-card completed">
-          <span class="stat-value">{{ stats.completed }}</span>
-          <span class="stat-label">已完成</span>
+          <div class="stat-icon-wrapper completed">
+            <span class="stat-icon">✅</span>
+          </div>
+          <div class="stat-info">
+            <span class="stat-value">{{ stats.completed }}</span>
+            <span class="stat-label">已完成</span>
+          </div>
         </div>
         <div class="stat-card in-progress">
-          <span class="stat-value">{{ stats.inProgress }}</span>
-          <span class="stat-label">进行中</span>
+          <div class="stat-icon-wrapper in-progress">
+            <span class="stat-icon"></span>
+          </div>
+          <div class="stat-info">
+            <span class="stat-value">{{ stats.inProgress }}</span>
+            <span class="stat-label">进行中</span>
+          </div>
         </div>
         <div class="stat-card not-started">
-          <span class="stat-value">{{ stats.notStarted }}</span>
-          <span class="stat-label">未开始</span>
+          <div class="stat-icon-wrapper not-started">
+            <span class="stat-icon">○</span>
+          </div>
+          <div class="stat-info">
+            <span class="stat-value">{{ stats.notStarted }}</span>
+            <span class="stat-label">未开始</span>
+          </div>
         </div>
       </div>
 
@@ -99,6 +121,7 @@ function formatDate(dateStr) {
           v-for="item in exerciseList" 
           :key="item.id" 
           class="exercise-item"
+          :class="`status-${item.status}`"
         >
           <div class="exercise-info">
             <div class="exercise-header">
@@ -107,22 +130,32 @@ function formatDate(dateStr) {
                 <span class="exercise-name">{{ item.name }}</span>
                 <span :class="['badge', `badge-${item.difficulty}`]">{{ getBadgeText(item.difficulty) }}</span>
               </div>
-              <span class="status-text" :class="`status-${item.status}`">{{ getStatusText(item.status) }}</span>
+              <span class="exercise-category">{{ item.category }}</span>
             </div>
             <p class="exercise-desc">{{ item.description }}</p>
             <div class="exercise-meta">
-              <span>最后编辑: {{ formatDate(item.lastEdited) }}</span>
-              <span>{{ item.category }}</span>
+              <span class="meta-item">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/>
+                </svg>
+                {{ formatDate(item.lastEdited) }}
+              </span>
             </div>
-            <div class="progress-bar" style="margin-top: 8px">
-              <div class="progress-bar-fill" :style="{ width: item.progress + '%' }"></div>
+            <div class="exercise-progress">
+              <div class="progress-bar">
+                <div class="progress-bar-fill" :class="`progress-${item.status}`" :style="{ width: item.progress + '%' }"></div>
+              </div>
+              <span class="progress-text">{{ item.progress }}%</span>
             </div>
           </div>
           <div class="exercise-actions">
             <button class="btn btn-primary" @click="goToEditor(item.id)">
               {{ item.status === 'not_started' ? '开始练习' : '继续编写' }}
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+              </svg>
             </button>
-            <button v-if="item.status !== 'not_started'" class="btn btn-danger btn-sm" @click="resetProject(item.id)">
+            <button v-if="item.status !== 'not_started'" class="btn btn-secondary btn-sm" @click="resetProject(item.id)">
               重置
             </button>
           </div>
@@ -139,18 +172,20 @@ function formatDate(dateStr) {
 }
 
 .page-header {
-  padding: 40px 24px 24px;
+  padding: 48px 24px 36px;
   text-align: center;
-  background: linear-gradient(180deg, rgba(31, 111, 235, 0.06) 0%, transparent 100%);
+  background: linear-gradient(180deg, rgba(78, 168, 222, 0.06) 0%, transparent 100%);
+  border-bottom: 1px solid var(--border-color);
 }
 
-.page-header h1 {
-  font-size: 28px;
-  font-weight: 700;
+.page-title {
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
   margin-bottom: 8px;
 }
 
-.page-header p {
+.page-subtitle {
   color: var(--text-secondary);
   font-size: 15px;
 }
@@ -161,7 +196,7 @@ function formatDate(dateStr) {
   padding: 24px;
 }
 
-.stats-bar {
+.stats-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 16px;
@@ -173,26 +208,65 @@ function formatDate(dateStr) {
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   padding: 20px;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  transition: var(--transition);
+}
+
+.stat-card:hover {
+  border-color: var(--border-light);
+  transform: translateY(-2px);
+}
+
+.stat-icon-wrapper {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.stat-icon-wrapper.total {
+  background: rgba(78, 168, 222, 0.1);
+  color: var(--accent-blue);
+}
+
+.stat-icon-wrapper.completed {
+  background: rgba(74, 222, 128, 0.1);
+  color: var(--accent-green);
+}
+
+.stat-icon-wrapper.in-progress {
+  background: rgba(251, 191, 36, 0.1);
+  color: var(--accent-orange);
+}
+
+.stat-icon-wrapper.not-started {
+  background: rgba(90, 106, 122, 0.1);
+  color: var(--text-muted);
+}
+
+.stat-info {
+  display: flex;
+  flex-direction: column;
 }
 
 .stat-value {
-  display: block;
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 700;
   color: var(--text-primary);
+  line-height: 1;
 }
 
 .stat-label {
-  display: block;
   font-size: 13px;
   color: var(--text-secondary);
   margin-top: 4px;
 }
-
-.stat-card.completed .stat-value { color: var(--accent-green); }
-.stat-card.in-progress .stat-value { color: var(--accent-blue); }
-.stat-card.not-started .stat-value { color: var(--text-muted); }
 
 .exercise-list {
   display: flex;
@@ -204,16 +278,29 @@ function formatDate(dateStr) {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
-  padding: 20px;
+  padding: 20px 24px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 20px;
+  gap: 24px;
   transition: var(--transition);
 }
 
 .exercise-item:hover {
-  border-color: var(--accent-blue);
+  border-color: var(--border-light);
+  box-shadow: var(--shadow-card);
+}
+
+.exercise-item.status-completed {
+  border-left: 3px solid var(--accent-green);
+}
+
+.exercise-item.status-save {
+  border-left: 3px solid var(--accent-blue);
+}
+
+.exercise-item.status-not_started {
+  border-left: 3px solid transparent;
 }
 
 .exercise-info {
@@ -241,29 +328,62 @@ function formatDate(dateStr) {
 .exercise-name {
   font-size: 16px;
   font-weight: 600;
+  letter-spacing: -0.2px;
 }
 
-.status-text {
-  font-size: 13px;
+.exercise-category {
+  font-size: 12px;
+  color: var(--accent-purple);
   font-weight: 500;
 }
-
-.status-completed { color: var(--accent-green); }
-.status-save { color: var(--accent-blue); }
-.status-not_started { color: var(--text-muted); }
 
 .exercise-desc {
   color: var(--text-secondary);
   font-size: 13px;
-  margin-bottom: 8px;
-  line-height: 1.5;
+  margin-bottom: 12px;
+  line-height: 1.6;
 }
 
 .exercise-meta {
   display: flex;
   gap: 16px;
+  margin-bottom: 12px;
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-size: 12px;
   color: var(--text-muted);
+}
+
+.exercise-progress {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.exercise-progress .progress-bar {
+  flex: 1;
+  max-width: 300px;
+}
+
+.progress-bar-fill.progress-completed {
+  background: linear-gradient(90deg, var(--accent-green-dark), var(--accent-green));
+}
+
+.progress-bar-fill.progress-save {
+  background: linear-gradient(90deg, var(--accent-blue-dark), var(--accent-blue));
+}
+
+.progress-text {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  min-width: 32px;
+  text-align: right;
+  font-family: var(--font-mono);
 }
 
 .exercise-actions {
@@ -273,23 +393,45 @@ function formatDate(dateStr) {
 }
 
 .btn-sm {
-  padding: 6px 12px;
+  padding: 8px 14px;
   font-size: 13px;
 }
 
+.btn-primary svg {
+  transition: var(--transition-fast);
+}
+
+.btn-primary:hover svg {
+  transform: translateX(3px);
+}
+
 @media (max-width: 768px) {
-  .stats-bar {
+  .stats-grid {
     grid-template-columns: repeat(2, 1fr);
   }
   .exercise-item {
     flex-direction: column;
     align-items: flex-start;
   }
+  .exercise-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
   .exercise-actions {
     width: 100%;
   }
   .exercise-actions .btn {
     flex: 1;
+  }
+  .container {
+    padding: 16px;
+  }
+  .page-header {
+    padding: 32px 16px 24px;
+  }
+  .page-title {
+    font-size: 26px;
   }
 }
 </style>

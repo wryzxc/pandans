@@ -503,21 +503,25 @@ const themeText = computed(() => editorTheme.value === 'vs-dark' ? '亮色' : '�
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 16px;
+  padding: 8px 20px;
   background: var(--bg-secondary);
   border-bottom: 1px solid var(--border-color);
-  min-height: 56px;
+  min-height: 52px;
+  backdrop-filter: blur(8px);
 }
 
 .header-left {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
 }
 
 .back-btn {
-  padding: 6px 10px;
+  padding: 6px 12px;
   font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .project-info {
@@ -527,13 +531,15 @@ const themeText = computed(() => editorTheme.value === 'vs-dark' ? '亮色' : '�
 }
 
 .project-info h2 {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
+  letter-spacing: -0.2px;
 }
 
 .project-category-tag {
   font-size: 12px;
   color: var(--accent-purple);
+  font-weight: 500;
 }
 
 .header-actions {
@@ -544,13 +550,14 @@ const themeText = computed(() => editorTheme.value === 'vs-dark' ? '亮色' : '�
 .btn-sm {
   padding: 6px 14px;
   font-size: 13px;
+  font-weight: 500;
 }
 
 .editor-toolbar {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 8px 16px;
+  gap: 12px;
+  padding: 8px 20px;
   background: var(--bg-tertiary);
   border-bottom: 1px solid var(--border-color);
   flex-wrap: wrap;
@@ -559,49 +566,60 @@ const themeText = computed(() => editorTheme.value === 'vs-dark' ? '亮色' : '�
 .toolbar-group {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
+  padding-right: 12px;
+  border-right: 1px solid var(--border-color);
+}
+
+.toolbar-group:last-of-type {
+  border-right: none;
+  padding-right: 0;
 }
 
 .toolbar-btn {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 4px 10px;
+  padding: 5px 10px;
   font-size: 12px;
+  font-weight: 500;
   background: transparent;
   color: var(--text-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: var(--transition-fast);
   white-space: nowrap;
 }
 
 .toolbar-btn:hover {
-  background: rgba(78, 139, 252, 0.12);
+  background: rgba(78, 168, 222, 0.08);
   color: var(--accent-blue);
-  border-color: var(--accent-blue);
 }
 
 .toolbar-btn.btn-icon {
-  padding: 4px 8px;
+  padding: 5px 8px;
 }
 
 .font-size-display {
   font-size: 12px;
   color: var(--text-secondary);
-  min-width: 40px;
+  min-width: 36px;
   text-align: center;
+  font-weight: 500;
+  font-family: var(--font-mono);
 }
 
 .toolbar-feedback {
   margin-left: auto;
   font-size: 12px;
+  font-weight: 500;
   color: var(--accent-green);
-  padding: 4px 12px;
-  background: rgba(63, 185, 80, 0.12);
-  border-radius: 4px;
-  animation: fadeIn 0.2s ease;
+  padding: 4px 14px;
+  background: rgba(74, 222, 128, 0.08);
+  border: 1px solid rgba(74, 222, 128, 0.15);
+  border-radius: var(--radius-full);
+  animation: fadeIn 0.25s ease;
 }
 
 @keyframes fadeIn {
@@ -616,8 +634,8 @@ const themeText = computed(() => editorTheme.value === 'vs-dark' ? '亮色' : '�
 }
 
 .doc-panel {
-  width: 30%;
-  min-width: 280px;
+  width: 28%;
+  min-width: 260px;
   background: var(--bg-secondary);
   border-right: 1px solid var(--border-color);
   display: flex;
@@ -625,15 +643,15 @@ const themeText = computed(() => editorTheme.value === 'vs-dark' ? '亮色' : '�
 }
 
 .editor-panel {
-  width: 40%;
-  min-width: 350px;
+  width: 42%;
+  min-width: 380px;
   display: flex;
   flex-direction: column;
 }
 
 .output-panel {
   flex: 1;
-  min-width: 300px;
+  min-width: 320px;
   display: flex;
   flex-direction: column;
 }
@@ -648,6 +666,7 @@ const themeText = computed(() => editorTheme.value === 'vs-dark' ? '亮色' : '�
   font-weight: 600;
   color: var(--text-secondary);
   background: var(--bg-tertiary);
+  letter-spacing: -0.1px;
 }
 
 .editor-panel-header {
@@ -668,10 +687,12 @@ const themeText = computed(() => editorTheme.value === 'vs-dark' ? '亮色' : '�
 
 .language-tag {
   font-size: 11px;
-  background: var(--accent-blue-dark);
+  font-weight: 600;
+  background: linear-gradient(135deg, var(--accent-blue-dark), var(--accent-blue));
   color: white;
-  padding: 2px 8px;
-  border-radius: 4px;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  letter-spacing: 0.5px;
 }
 
 .file-tabs {
@@ -696,8 +717,9 @@ const themeText = computed(() => editorTheme.value === 'vs-dark' ? '亮色' : '�
   background: var(--bg-secondary);
   border-right: 1px solid var(--border-color);
   cursor: pointer;
-  transition: all 0.15s;
+  transition: var(--transition-fast);
   white-space: nowrap;
+  position: relative;
 }
 
 .file-tab:hover {
@@ -708,7 +730,17 @@ const themeText = computed(() => editorTheme.value === 'vs-dark' ? '亮色' : '�
 .file-tab.active {
   background: var(--bg-primary);
   color: var(--text-primary);
-  border-bottom: 2px solid var(--accent-blue);
+}
+
+.file-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 16px;
+  right: 16px;
+  height: 2px;
+  background: var(--accent-blue);
+  border-radius: 1px 1px 0 0;
 }
 
 .tab-name {
@@ -719,7 +751,7 @@ const themeText = computed(() => editorTheme.value === 'vs-dark' ? '亮色' : '�
 
 .modified-dot {
   color: var(--accent-blue);
-  font-size: 14px;
+  font-size: 10px;
 }
 
 .tab-close {
@@ -735,23 +767,23 @@ const themeText = computed(() => editorTheme.value === 'vs-dark' ? '亮色' : '�
   border-radius: 3px;
   color: var(--text-muted);
   cursor: pointer;
-  transition: all 0.15s;
+  transition: var(--transition-fast);
 }
 
 .tab-close:hover {
-  background: rgba(255, 107, 107, 0.2);
-  color: #ff6b6b;
+  background: rgba(248, 113, 113, 0.15);
+  color: var(--accent-red);
 }
 
 .doc-content {
   flex: 1;
   overflow-y: auto;
-  padding: 16px;
+  padding: 20px;
 }
 
 .doc-section {
-  margin-bottom: 24px;
-  padding-bottom: 16px;
+  margin-bottom: 28px;
+  padding-bottom: 20px;
   border-bottom: 1px solid var(--border-color);
 }
 
@@ -760,11 +792,11 @@ const themeText = computed(() => editorTheme.value === 'vs-dark' ? '亮色' : '�
 }
 
 .section-title {
-  font-size: 15px;
-  margin-bottom: 12px;
+  font-size: 14px;
+  margin-bottom: 14px;
   color: var(--accent-blue);
   font-weight: 700;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.2px;
 }
 
 .sub-section {
@@ -774,53 +806,58 @@ const themeText = computed(() => editorTheme.value === 'vs-dark' ? '亮色' : '�
 .sub-section h4 {
   font-size: 13px;
   margin-bottom: 6px;
-  color: var(--accent-blue);
+  color: var(--text-primary);
   font-weight: 600;
 }
 
 .sub-section p {
   font-size: 13px;
   color: var(--text-secondary);
-  line-height: 1.65;
+  line-height: 1.7;
 }
 
 .highlight-box {
-  background: rgba(78, 139, 252, 0.08);
-  border: 1px solid rgba(78, 139, 252, 0.25);
-  border-radius: 6px;
-  padding: 12px;
+  background: rgba(78, 168, 222, 0.06);
+  border: 1px solid rgba(78, 168, 222, 0.15);
+  border-radius: var(--radius-sm);
+  padding: 14px;
 }
 
 .risk-box {
-  background: rgba(255, 107, 107, 0.08);
-  border: 1px solid rgba(255, 107, 107, 0.25);
-  border-radius: 6px;
-  padding: 12px;
+  background: rgba(248, 113, 113, 0.06);
+  border: 1px solid rgba(248, 113, 113, 0.15);
+  border-radius: var(--radius-sm);
+  padding: 14px;
 }
 
 .risk-box h4 {
-  color: #ff6b6b !important;
+  color: var(--accent-red) !important;
 }
 
 .task-item {
-  background: var(--bg-tertiary);
+  background: var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   margin-bottom: 12px;
   overflow: hidden;
+  transition: var(--transition-fast);
+}
+
+.task-item:hover {
+  border-color: var(--border-light);
 }
 
 .task-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 12px;
-  background: rgba(78, 139, 252, 0.05);
+  padding: 10px 14px;
+  background: rgba(78, 168, 222, 0.04);
   border-bottom: 1px solid var(--border-color);
 }
 
 .task-number {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   color: var(--accent-blue);
 }
@@ -828,13 +865,14 @@ const themeText = computed(() => editorTheme.value === 'vs-dark' ? '亮色' : '�
 .task-timeline {
   font-size: 11px;
   color: var(--accent-purple);
-  background: rgba(155, 126, 255, 0.12);
-  padding: 2px 8px;
-  border-radius: 12px;
+  background: rgba(192, 132, 252, 0.1);
+  padding: 2px 10px;
+  border-radius: var(--radius-full);
+  font-weight: 500;
 }
 
 .task-body {
-  padding: 12px;
+  padding: 14px;
 }
 
 .task-body p {
@@ -858,11 +896,16 @@ const themeText = computed(() => editorTheme.value === 'vs-dark' ? '亮色' : '�
 }
 
 .concept-item {
-  background: var(--bg-tertiary);
+  background: var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: 8px;
-  padding: 12px;
+  border-radius: var(--radius-sm);
+  padding: 14px;
   margin-bottom: 10px;
+  transition: var(--transition-fast);
+}
+
+.concept-item:hover {
+  border-color: var(--border-light);
 }
 
 .concept-item h4 {
@@ -885,26 +928,31 @@ const themeText = computed(() => editorTheme.value === 'vs-dark' ? '亮色' : '�
 }
 
 .criteria-item {
-  background: var(--bg-tertiary);
+  background: var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: 8px;
-  padding: 10px;
+  border-radius: var(--radius-sm);
+  padding: 12px;
   display: flex;
   flex-direction: column;
+  transition: var(--transition-fast);
+}
+
+.criteria-item:hover {
+  border-color: var(--border-light);
 }
 
 .criteria-icon {
-  font-size: 18px;
+  font-size: 16px;
   margin-bottom: 4px;
 }
 
 .criteria-label {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   color: var(--accent-blue);
   margin-bottom: 4px;
   text-transform: uppercase;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.5px;
 }
 
 .criteria-item p {
@@ -917,31 +965,37 @@ const themeText = computed(() => editorTheme.value === 'vs-dark' ? '亮色' : '�
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 2000;
+  animation: fadeIn 0.2s ease;
 }
 
 .modal {
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
-  padding: 24px;
+  padding: 28px;
   max-width: 400px;
   width: 90%;
+  box-shadow: var(--shadow-card-hover);
 }
 
 .modal h3 {
   font-size: 18px;
+  font-weight: 700;
   margin-bottom: 12px;
+  letter-spacing: -0.3px;
 }
 
 .modal p {
   color: var(--text-secondary);
   font-size: 14px;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
+  line-height: 1.6;
 }
 
 .modal-actions {
@@ -972,9 +1026,22 @@ const themeText = computed(() => editorTheme.value === 'vs-dark' ? '亮色' : '�
   }
   .editor-toolbar {
     gap: 8px;
+    padding: 8px 16px;
   }
   .toolbar-group {
     gap: 4px;
+    padding-right: 8px;
+  }
+}
+
+@media (max-width: 768px) {
+  .editor-header {
+    padding: 8px 16px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .header-actions {
+    flex-wrap: wrap;
   }
 }
 </style>

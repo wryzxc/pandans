@@ -1,0 +1,254 @@
+name:  Release - Create GitHub Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: 'Version bump type'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - major
+          - minor
+          - patch
+      release_notes:
+        description: 'Custom release notes (optional)'
+        required: false
+        type: string
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  prepare:
+    name:  Prepare Release
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.bump.outputs.new_version }}
+      tag: ${{ steps.bump.outputs.tag }}
+      changelog: ${{ steps.changelog.outputs.changelog }}
+
+    steps:
+      - name:  Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name:  Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name:  Get current version
+        id: current_version
+        run: |
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          echo "current_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          echo "Current version: $CURRENT_VERSION"
+
+      - name:  Bump version
+        id: bump
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          VERSION_TYPE="${{ github.event.inputs.version_type }}"
+          
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
+          
+          case "$VERSION_TYPE" in
+            major)
+              MAJOR=$((MAJOR + 1))
+              MINOR=0
+              PATCH=0
+              ;;
+            minor)
+              MINOR=$((MINOR + 1))
+              PATCH=0
+              ;;
+            patch)
+              PATCH=$((PATCH + 1))
+              ;;
+          esac
+          
+          NEW_VERSION="$MAJOR.$MINOR.$PATCH"
+          echo "New version: $NEW_VERSION"
+          
+          node -e "
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
+            pkg.version = '$NEW_VERSION';
+            fs.writeFileSync('./package.json', JSON.stringify(pkg, null, 2) + '\n');
+          "
+          
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "tag=v$NEW_VERSION" >> $GITHUB_OUTPUT
+
+      - name:  Get tag version
+        id: tag_version
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          VERSION="${TAG#v}"
+          echo "new_version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      - name:  Generate changelog
+        id: changelog
+        run: |
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          echo "Previous tag: $PREVIOUS_TAG"
+          
+          if [ -n "$PREVIOUS_TAG" ]; then
+            CHANGELOG=$(git log --pretty=format:"- %s (%h)" "$PREVIOUS_TAG"..HEAD)
+          else
+            CHANGELOG=$(git log --pretty=format:"- %s (%h)" --all)
+          fi
+          
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGELOG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          
+          echo "=== Changelog ==="
+          echo "$CHANGELOG"
+
+      - name:  Commit version bump
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          git add package.json package-lock.json 2>/dev/null || true
+          git commit -m "chore(release): bump version to ${{ steps.bump.outputs.new_version }}" || echo "No changes to commit"
+          git push origin HEAD:master
+
+      - name:  Create and push tag
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          git tag -a "${{ steps.bump.outputs.tag }}" -m "Release ${{ steps.bump.outputs.tag }}"
+          git push origin "${{ steps.bump.outputs.tag }}"
+
+  release:
+    name:  Create GitHub Release
+    needs: prepare
+    runs-on: ubuntu-latest
+
+    steps:
+      - name:  Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name:  Install dependencies
+        run: npm ci --prefer-offline
+
+      - name:  Build project
+        run: npm run build
+
+      - name:  Create release archive
+        run: |
+          cd dist
+          zip -r ../pandans-${{ needs.prepare.outputs.version }}.zip .
+          tar -czf ../pandans-${{ needs.prepare.outputs.version }}.tar.gz .
+          cd ..
+          echo "Created archives:"
+          ls -lh pandans-${{ needs.prepare.outputs.version }}.*
+
+      - name:  Get commit count
+        id: commits
+        run: |
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -n "$PREVIOUS_TAG" ]; then
+            COUNT=$(git rev-list --count "$PREVIOUS_TAG"..HEAD)
+          else
+            COUNT=$(git rev-list --count HEAD)
+          fi
+          echo "count=$COUNT" >> $GITHUB_OUTPUT
+
+      - name:  Generate release body
+        id: release_body
+        run: |
+          VERSION="${{ needs.prepare.outputs.version }}"
+          CUSTOM_NOTES="${{ github.event.inputs.release_notes }}"
+          CHANGELOG="${{ needs.prepare.outputs.changelog }}"
+          COMMIT_COUNT="${{ steps.commits.outputs.count }}"
+          
+          cat > /tmp/release_body.md << 'ENDOFBODY'
+          ## 📦 PandasLab vVERSION
+
+          END
+
+          if [ -n "$CUSTOM_NOTES" ]; then
+            echo "$CUSTOM_NOTES" >> /tmp/release_body.md
+            echo "" >> /tmp/release_body.md
+          fi
+
+          cat >> /tmp/release_body.md << ENDOFBODY
+          ### 📊 Release Statistics
+          - **Version**: $VERSION
+          - **Commits**: $COMMIT_COUNT new commits since last release
+          - **Build Date**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')
+
+          ### 📝 Changelog
+          $CHANGELOG
+
+          ### 📦 Downloads
+          - [pandans-$VERSION.zip](https://github.com/wryzxc/pandans/releases/download/v$VERSION/pandans-$VERSION.zip)
+          - [pandans-$VERSION.tar.gz](https://github.com/wryzxc/pandans/releases/download/v$VERSION/pandans-$VERSION.tar.gz)
+
+          ###  Quick Start
+          1. Download the release archive
+          2. Extract to your desired location
+          3. Open `index.html` in your browser (for offline use)
+          4. Or serve with: \`npx serve dist/\`
+
+          ---
+          *Auto-generated by GitHub Actions*
+          ENDOFBODY
+
+          echo "release_body=$(cat /tmp/release_body.md)" >> $GITHUB_OUTPUT
+
+      - name:  Create GitHub Release
+        id: create_release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.prepare.outputs.version }}
+          name:  PandasLab v${{ needs.prepare.outputs.version }}
+          body_path: /tmp/release_body.md
+          draft: false
+          prerelease: false
+          files: |
+            pandans-${{ needs.prepare.outputs.version }}.zip
+            pandans-${{ needs.prepare.outputs.version }}.tar.gz
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name:  Generate release report
+        if: always()
+        run: |
+          echo "## Release Report" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version**: ${{ needs.prepare.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Tag**: v${{ needs.prepare.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "- **Release URL**: ${{ steps.create_release.outputs.url }}" >> $GITHUB_STEP_SUMMARY
+            echo "- **Message**: ✅ Release created successfully!" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- **Message**:  Release failed" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name:  Notify on failure
+        if: failure()
+        run: |
+          echo "::error::Release creation failed!"
+          echo "Check the logs for details."
+          echo "The version bump commit may need manual cleanup."

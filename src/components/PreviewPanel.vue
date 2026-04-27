@@ -141,20 +141,23 @@ defineExpose({ runCode })
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
+  padding: 10px 16px;
   border-bottom: 1px solid var(--border-color);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
-  color: var(--text-primary);
+  color: var(--text-secondary);
+  letter-spacing: -0.1px;
+  background: var(--bg-tertiary);
 }
 
 .btn-sm {
   padding: 6px 14px;
   font-size: 13px;
+  font-weight: 600;
 }
 
 .btn-disabled {
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: not-allowed;
   pointer-events: none;
 }
@@ -162,7 +165,7 @@ defineExpose({ runCode })
 .output-area {
   flex: 1;
   overflow: auto;
-  padding: 16px;
+  padding: 16px 20px;
   position: relative;
 }
 
@@ -170,17 +173,26 @@ defineExpose({ runCode })
   color: var(--text-muted);
   font-size: 13px;
   text-align: center;
-  padding: 40px 20px;
+  padding: 48px 20px;
   margin: 0;
+  font-style: italic;
 }
 
 .output-text {
-  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  font-family: var(--font-mono);
   font-size: 13px;
   line-height: 1.7;
   color: var(--accent-green);
   white-space: pre-wrap;
   word-break: break-all;
   margin: 0;
+  padding: 0;
+}
+
+@media (max-width: 1024px) {
+  .preview-panel {
+    border-left: none;
+    border-top: 1px solid var(--border-color);
+  }
 }
 </style>
