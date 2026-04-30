@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { getProjectById } from '../data/projects.js'
 import MonacoEditor from '../components/MonacoEditor.vue'
 import PreviewPanel from '../components/PreviewPanel.vue'
+import ChapterLearning from '../components/ChapterLearning.vue'
 import { saveProgress, getProgress } from '../utils/storage.js'
 
 const route = useRoute()
@@ -230,6 +231,38 @@ function toggleWordWrap() {
 
 const themeIcon = computed(() => editorTheme.value === 'vs-dark' ? '☀️' : '🌙')
 const themeText = computed(() => editorTheme.value === 'vs-dark' ? '亮色' : '暗色')
+
+const activeDocTab = ref('requirements')
+
+function setDocTab(tab: string) {
+  activeDocTab.value = tab
+}
+
+function handleRunDemo(demoCode: string) {
+  code.value = demoCode
+  if (activeFile.value) {
+    activeFile.value.content = demoCode
+    activeFile.value.isModified = true
+  }
+  if (editorRef.value) {
+    editorRef.value.setCode(demoCode)
+  }
+  setTimeout(() => {
+    runCode()
+  }, 100)
+}
+
+function handleLoadCode(demoCode: string) {
+  code.value = demoCode
+  if (activeFile.value) {
+    activeFile.value.content = demoCode
+    activeFile.value.isModified = true
+  }
+  if (editorRef.value) {
+    editorRef.value.setCode(demoCode)
+  }
+  showCopyFeedback('示例代码已加载到编辑器')
+}
 </script>
 
 <template>
@@ -300,10 +333,25 @@ const themeText = computed(() => editorTheme.value === 'vs-dark' ? '亮色' : '�
 
     <div class="editor-body">
       <div class="doc-panel">
-        <div class="panel-header">
-          <span>📋 项目需求文档</span>
+        <div class="panel-header doc-panel-tabs">
+          <button
+            class="doc-tab"
+            :class="{ active: activeDocTab === 'requirements' }"
+            @click="setDocTab('requirements')"
+          >
+            📋 项目需求
+          </button>
+          <button
+            v-if="project?.chapterLearning?.length"
+            class="doc-tab"
+            :class="{ active: activeDocTab === 'learning' }"
+            @click="setDocTab('learning')"
+          >
+            📖 章节学习
+            <span class="tab-badge">{{ project.chapterLearning.length }}</span>
+          </button>
         </div>
-        <div class="doc-content">
+        <div v-if="activeDocTab === 'requirements'" class="doc-content">
           <div v-if="project?.background" class="doc-section section-background">
             <h3 class="section-title">📌 项目背景</h3>
             <div class="sub-section">
@@ -433,6 +481,13 @@ const themeText = computed(() => editorTheme.value === 'vs-dark' ? '亮色' : '�
             </div>
           </div>
         </div>
+        <div v-else-if="activeDocTab === 'learning'" class="doc-content">
+          <ChapterLearning
+            :chapters="project?.chapterLearning || []"
+            @run-demo="handleRunDemo"
+            @load-code="handleLoadCode"
+          />
+        </div>
       </div>
 
       <div class="editor-panel">
@@ -484,7 +539,7 @@ const themeText = computed(() => editorTheme.value === 'vs-dark' ? '亮色' : '�
       </div>
 
       <div class="output-panel">
-        <PreviewPanel :code="code" ref="previewRef" @output="handleOutput" />
+        <PreviewPanel :code="code" :reference-code="referenceCode" :project="project" ref="previewRef" @output="handleOutput" />
       </div>
     </div>
   </div>
@@ -1043,5 +1098,64 @@ const themeText = computed(() => editorTheme.value === 'vs-dark' ? '亮色' : '�
   .header-actions {
     flex-wrap: wrap;
   }
+}
+
+/* 文档面板标签页样式 */
+.doc-panel-tabs {
+  display: flex;
+  padding: 0;
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.doc-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 18px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  white-space: nowrap;
+}
+
+.doc-tab:hover {
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+}
+
+.doc-tab.active {
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+}
+
+.doc-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 12px;
+  right: 12px;
+  height: 2px;
+  background: var(--accent-blue);
+  border-radius: 1px 1px 0 0;
+}
+
+.tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  background: var(--accent-blue);
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: var(--radius-full);
 }
 </style>

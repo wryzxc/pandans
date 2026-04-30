@@ -6,13 +6,14 @@ export const categories = [
   { id: 'advanced', name: '综合实战', icon: '🔴' }
 ]
 
-// 六大模块通用结构定义
+// 七大模块通用结构定义
 // background: 项目背景（起源/受众/环境/问题/意义/行业数据）
 // tasks: 核心任务清单（目标/责任主体/时间节点/关键成果物）
 // knowledge: 详细知识讲解（基础理论/实践应用/前沿发展）
 // concepts: 概念解析（内涵外延/术语辨析/应用场景/关联关系）
 // techPoints: 技术要点（选型依据/关键参数/实现方法/风险策略）
 // completionCriteria: 完成标准（功能/性能/质量/安全/文档/体验）
+// chapterLearning: 章节学习（与知识点对应的示例代码/代码说明/运行演示）
 
 export const projects = [
   {
@@ -90,6 +91,123 @@ export const projects = [
       documentation: '代码包含关键步骤注释；输出结果包含清洗前后的数据对比。',
       experience: '代码可一键运行；输出结果格式清晰易读；错误信息明确可定位。'
     },
+
+    chapterLearning: [
+      {
+        title: '1.1 Pandas 数据读取与诊断',
+        description: '学习使用 pd.read_csv 读取数据，并用 df.info() 和 df.describe() 进行数据诊断。',
+        code: `import pandas as pd
+import numpy as np
+
+# 创建示例数据
+data = {
+    'name': ['Alice', 'Bob', 'Charlie', None, 'Eve'],
+    'age': [25, 30, np.nan, 28, 35],
+    'salary': ['$50,000', '$60,000', '$55,000', '$70,000', None]
+}
+df = pd.DataFrame(data)
+
+# 数据诊断
+print("=== 数据基本信息 ===")
+print(df.info())
+print("\\n=== 统计描述 ===")
+print(df.describe())
+print("\\n=== 缺失值统计 ===")
+print(df.isna().sum())`,
+        keyPoints: ['pd.DataFrame() 创建数据框', 'df.info() 查看数据类型和非空值', 'df.describe() 统计数值列', 'df.isna().sum() 统计缺失值']
+      },
+      {
+        title: '1.2 正则表达式清洗文本',
+        description: '使用 re.sub 和 str.replace 清洗文本数据，移除货币符号和千分位。',
+        code: `import pandas as pd
+import re
+
+# 模拟含货币符号的数据
+df = pd.DataFrame({
+    'price': ['$1,200.00', '€850.5', '$3,450.75', '€120.0']
+})
+
+# 方法1: 使用 re.sub 清洗
+def clean_price(val):
+    if pd.isna(val):
+        return None
+    # 移除非数字和小数点的字符
+    cleaned = re.sub(r'[^\\d.]', '', str(val))
+    return float(cleaned) if cleaned else None
+
+df['price_clean'] = df['price'].apply(clean_price)
+
+print("原始数据:")
+print(df['price'])
+print("\\n清洗后:")
+print(df['price_clean'])
+print("\\n数据类型:", df['price_clean'].dtype)`,
+        keyPoints: ['re.sub(pattern, repl, string) 正则替换', 'str(val) 确保输入为字符串', 'float() 转换为数值类型', 'apply() 批量应用函数']
+      },
+      {
+        title: '1.3 缺失值处理策略',
+        description: '掌握 fillna、dropna 和条件填充等缺失值处理方法。',
+        code: `import pandas as pd
+import numpy as np
+
+# 创建含缺失值的数据
+df = pd.DataFrame({
+    'A': [1, 2, np.nan, 4],
+    'B': ['x', None, 'z', 'w'],
+    'C': [10, 20, 30, np.nan]
+})
+
+print("原始数据:")
+print(df)
+
+# 方法1: 删除含缺失值的行
+df_drop = df.dropna()
+print("\\n删除缺失值后:")
+print(df_drop)
+
+# 方法2: 用固定值填充
+df_fill = df.fillna({'A': 0, 'B': 'unknown', 'C': df['C'].mean()})
+print("\\n填充缺失值后:")
+print(df_fill)
+
+# 方法3: 条件填充
+df['A_filled'] = df['A'].fillna(df['A'].median())
+print("\\n用中位数填充A列:")
+print(df[['A', 'A_filled']])`,
+        keyPoints: ['dropna() 删除缺失值', 'fillna() 填充缺失值', 'fillna(dict) 按列指定填充值', 'median()/mean() 统计值填充']
+      },
+      {
+        title: '1.4 日期时间处理',
+        description: '使用 pd.to_datetime 统一解析多种日期格式，并进行日期运算。',
+        code: `import pandas as pd
+from datetime import datetime
+
+# 多种日期格式
+dates = ['2024-01-15', '01/20/2024', '2024-02-01 10:30', '03/01/2024']
+df = pd.DataFrame({'raw_date': dates})
+
+# 自动解析日期
+df['parsed_date'] = pd.to_datetime(df['raw_date'], errors='coerce')
+
+print("原始日期:")
+print(df['raw_date'])
+print("\\n解析后:")
+print(df['parsed_date'])
+print("\\n数据类型:", df['parsed_date'].dtype)
+
+# 日期运算
+today = datetime.now()
+df['days_ago'] = (today - df['parsed_date']).dt.days
+print("\\n距今天数:")
+print(df[['parsed_date', 'days_ago']])
+
+# 筛选未来日期
+df['is_future'] = df['parsed_date'] > today
+print("\\n是否未来日期:")
+print(df[['parsed_date', 'is_future']])`,
+        keyPoints: ['pd.to_datetime() 自动解析日期', 'errors="coerce" 将无法解析的转为NaT', 'dt.days 获取天数差', '日期可以直接比较大小']
+      }
+    ],
 
     initialCode: `import pandas as pd
 import re
@@ -256,6 +374,130 @@ print(df)`
       documentation: '代码注释说明长宽格式转换逻辑；输出包含重塑前后对比。',
       experience: '代码模块化，每步有中间结果打印；会话切割逻辑清晰易懂。'
     },
+
+    chapterLearning: [
+      {
+        title: '2.1 pivot_table 数据透视',
+        description: '学习使用 pivot_table 将长格式数据转为宽格式，掌握 index/columns/values/aggfunc 参数。',
+        code: `import pandas as pd
+
+# 长格式数据
+data = {
+    'user_id': [1, 1, 1, 2, 2, 3],
+    'action': ['click', 'cart', 'buy', 'click', 'buy', 'click'],
+    'timestamp': pd.to_datetime([
+        '2024-01-01 10:00', '2024-01-01 10:05', '2024-01-01 10:15',
+        '2024-01-02 14:00', '2024-01-02 14:30',
+        '2024-01-03 09:00'
+    ])
+}
+df = pd.DataFrame(data)
+
+# pivot_table 长转宽
+pivot = df.pivot_table(
+    index='user_id',
+    columns='action',
+    values='timestamp',
+    aggfunc='count',
+    fill_value=0
+)
+
+print("透视后的宽表:")
+print(pivot)
+print("\\n索引:", pivot.index.tolist())
+print("列名:", pivot.columns.tolist())`,
+        keyPoints: ['index 指定行分组字段', 'columns 指定列展开字段', 'aggfunc 指定聚合方式', 'fill_value 填充缺失值']
+      },
+      {
+        title: '2.2 groupby + diff 计算组内差值',
+        description: '使用 groupby 分组后，用 diff() 计算每个用户相邻行为的时间间隔。',
+        code: `import pandas as pd
+
+# 用户行为数据
+df = pd.DataFrame({
+    'user_id': [1, 1, 1, 2, 2],
+    'action': ['click', 'cart', 'buy', 'click', 'buy'],
+    'timestamp': pd.to_datetime([
+        '2024-01-01 10:00', '2024-01-01 10:05', '2024-01-01 10:15',
+        '2024-01-02 14:00', '2024-01-02 14:30'
+    ])
+})
+
+# 先按用户和时间排序
+df = df.sort_values(['user_id', 'timestamp'])
+
+# 计算每个用户相邻行为的时间差
+df['time_diff'] = df.groupby('user_id')['timestamp'].diff()
+
+print("时间间隔计算结果:")
+print(df[['user_id', 'action', 'timestamp', 'time_diff']])
+print("\\ntime_diff 数据类型:", df['time_diff'].dtype)`,
+        keyPoints: ['sort_values() 先排序再计算', 'groupby().diff() 计算组内差值', 'diff() 自动处理组边界为NaN', 'Timedelta 类型支持时间运算']
+      },
+      {
+        title: '2.3 cumsum 累计求和与会话切割',
+        description: '使用 transform + cumsum 实现会话窗口切割，将连续行为分组为会话。',
+        code: `import pandas as pd
+
+# 用户行为数据
+df = pd.DataFrame({
+    'user_id': [1, 1, 1, 1, 2, 2],
+    'timestamp': pd.to_datetime([
+        '2024-01-01 10:00', '2024-01-01 10:05',
+        '2024-01-01 11:00', '2024-01-01 11:05',
+        '2024-01-02 14:00', '2024-01-02 15:00'
+    ])
+})
+
+# 计算时间差
+df = df.sort_values(['user_id', 'timestamp'])
+df['time_diff'] = df.groupby('user_id')['timestamp'].diff()
+
+# 判断是否为新的会话（间隔超过30分钟）
+df['new_session'] = df.groupby('user_id')['timestamp'].transform(
+    lambda x: x.diff() > pd.Timedelta('30min')
+)
+
+# 累计求和生成会话ID
+df['session_id'] = df.groupby('user_id')['new_session'].cumsum()
+
+print("会话划分结果:")
+print(df[['user_id', 'timestamp', 'time_diff', 'new_session', 'session_id']])`,
+        keyPoints: ['transform() 保持原始DataFrame形状', 'Timedelta("30min") 定义时间阈值', 'cumsum() 将布尔值转为递增ID', 'lambda 实现自定义判断逻辑']
+      },
+      {
+        title: '2.4 NaN 值处理与数据验证',
+        description: '学习使用 fillna 处理透视产生的缺失值，并验证数据质量。',
+        code: `import pandas as pd
+import numpy as np
+
+# 含缺失值的数据
+df = pd.DataFrame({
+    'A': [1, 2, np.nan, 4],
+    'B': [np.nan, 2, 3, 4],
+    'C': [1, np.nan, np.nan, 4]
+})
+
+print("原始数据:")
+print(df)
+print("\\n缺失值统计:")
+print(df.isna().sum())
+
+# 用固定值填充
+df_filled = df.fillna(0)
+print("\\n填充0后:")
+print(df_filled)
+
+# 用列均值填充
+df_mean = df.fillna(df.mean())
+print("\\n用均值填充后:")
+print(df_mean)
+
+# 检查是否还有缺失值
+print("\\n是否还有缺失值:", df_mean.isna().sum().sum() == 0)`,
+        keyPoints: ['fillna(0) 用固定值填充', 'fillna(df.mean()) 用统计值填充', 'isna().sum() 统计每列缺失数', '双重sum() 统计整个DataFrame缺失数']
+      }
+    ],
 
     initialCode: `import pandas as pd
 import numpy as np
@@ -481,6 +723,7 @@ cart_data = {
 df = pd.DataFrame(cart_data)
 
 basket = df.groupby('order_id')['product'].apply(list).reset_index()
+basket.columns = ['order_id', 'items']
 
 all_products = df['product'].unique()
 one_hot = {}
@@ -937,7 +1180,7 @@ import numpy as np
 
 # 模拟24小时GMV数据 (含异常)
 np.random.seed(42)
-hours = pd.date_range('2024-01-01', periods=48, freq='H')
+hours = pd.date_range('2024-01-01', periods=48, freq='h')
 gmv = np.random.normal(1000, 200, 48)
 gmv[12] = 200   # 断崖: 午间暴跌
 gmv[13] = 150   # 持续异常
@@ -993,7 +1236,7 @@ print("✅ 异常检测完成!")`,
 import numpy as np
 
 np.random.seed(42)
-hours = pd.date_range('2024-01-01', periods=48, freq='H')
+hours = pd.date_range('2024-01-01', periods=48, freq='h')
 gmv = np.random.normal(1000, 200, 48)
 gmv[12] = 200
 gmv[13] = 150
@@ -1191,7 +1434,14 @@ orders = pd.DataFrame({
     'amount': [500, 800, 300, 650, 1200]
 })
 
-attribution = pd.merge_asof(orders.sort_values('order_time'), clicks.sort_values('click_time'), on='user_id', left_on='order_time', right_on='click_time', direction='backward')
+attribution = pd.merge_asof(
+    orders.sort_values('order_time'),
+    clicks.sort_values('click_time'),
+    left_on='order_time',
+    right_on='click_time',
+    by='user_id',
+    direction='backward'
+)
 
 channel_stats = attribution.groupby('channel').agg(orders=('user_id', 'count'), revenue=('amount', 'sum'), cost=('cost', 'sum'))
 channel_stats['roi'] = (channel_stats['revenue'] - channel_stats['cost']) / channel_stats['cost']
@@ -1356,9 +1606,11 @@ data = {
 df = pd.DataFrame(data)
 
 def clean_text(text):
-    if pd.isna(text): return ''
+    if pd.isna(text):
+        return ''
     text = re.sub(r'<[^>]+>', '', str(text))
-    text = re.sub(r'[^\\w\\s，。！？]', '', text)
+    # 保留中文、英文、数字和常见中文标点
+    text = re.sub(r'[^\u4e00-\u9fa5a-zA-Z0-9\s，。！？、；：\"\"（）【】《》]', '', text)
     return text.strip()
 
 df['clean'] = df['comment'].apply(clean_text)
@@ -1529,7 +1781,7 @@ def classify(pct):
 
 pareto['category'] = pareto['cumulative_pct'].apply(classify)
 print("爆款数:", (pareto['category'] == '爆款').sum())
-print("爆款贡献:", "%.1f%%%%" % (pareto[pareto['category']=='爆款']['sales'].sum()/total*100))`
+print("爆款贡献:", "%.1f%%" % (pareto[pareto['category']=='爆款']['sales'].sum()/total*100))`
   },
 
   {
