@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 
 const route = useRoute()
@@ -11,6 +11,26 @@ const navLinks = [
   { to: '/my-exercises', label: '我的练习', icon: '📝' },
   { to: '/about', label: '关于', icon: 'ℹ️' }
 ]
+
+// 返回个人作品集链接配置
+const PORTFOLIO_URL = 'https://grjs-c2m-73z.pages.dev/projects'
+const showPortfolioLink = ref(true)
+
+// 从 localStorage 读取用户偏好
+const STORAGE_KEY = 'pandaslab_show_portfolio_link'
+const savedPreference = localStorage.getItem(STORAGE_KEY)
+if (savedPreference !== null) {
+  showPortfolioLink.value = savedPreference === 'true'
+}
+
+// 监听变化并保存
+watch(showPortfolioLink, (newValue) => {
+  localStorage.setItem(STORAGE_KEY, String(newValue))
+})
+
+function togglePortfolioLink() {
+  showPortfolioLink.value = !showPortfolioLink.value
+}
 </script>
 
 <template>
@@ -42,9 +62,47 @@ const navLinks = [
           {{ link.label }}
           <span v-if="route.path === link.to" class="nav-link-indicator"></span>
         </RouterLink>
+
+        <!-- 返回个人作品集链接 -->
+        <a
+          v-if="showPortfolioLink"
+          :href="PORTFOLIO_URL"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="nav-link portfolio-link"
+          @click="mobileMenuOpen = false"
+        >
+          <span class="nav-link-icon">👤</span>
+          返回个人作品集
+          <svg class="external-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/>
+          </svg>
+        </a>
       </nav>
 
       <div class="nav-actions">
+        <!-- 取消/显示链接开关 -->
+        <button
+          v-if="showPortfolioLink"
+          class="portfolio-toggle"
+          @click="togglePortfolioLink"
+          title="隐藏个人作品集链接"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 6L6 18M6 6l12 12"/>
+          </svg>
+        </button>
+        <button
+          v-else
+          class="portfolio-toggle portfolio-toggle--show"
+          @click="togglePortfolioLink"
+          title="显示个人作品集链接"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+          </svg>
+        </button>
+
         <RouterLink to="/projects" class="nav-cta">
           <span>开始练习</span>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -138,6 +196,7 @@ const navLinks = [
   font-weight: 500;
   transition: var(--transition-fast);
   white-space: nowrap;
+  text-decoration: none;
 }
 
 .nav-link-icon {
@@ -175,10 +234,61 @@ const navLinks = [
   border-radius: 1px;
 }
 
+/* 返回个人作品集链接样式 */
+.portfolio-link {
+  color: var(--accent-purple);
+}
+
+.portfolio-link:hover {
+  color: #c084fc;
+  background: rgba(192, 132, 252, 0.1);
+}
+
+.external-icon {
+  opacity: 0.5;
+  transition: var(--transition-fast);
+}
+
+.portfolio-link:hover .external-icon {
+  opacity: 1;
+  transform: translate(1px, -1px);
+}
+
 .nav-actions {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+/* 取消链接开关按钮 */
+.portfolio-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.portfolio-toggle:hover {
+  background: rgba(248, 113, 113, 0.15);
+  border-color: rgba(248, 113, 113, 0.3);
+  color: #f87171;
+}
+
+.portfolio-toggle--show {
+  color: var(--accent-blue);
+}
+
+.portfolio-toggle--show:hover {
+  background: rgba(59, 130, 246, 0.15);
+  border-color: rgba(59, 130, 246, 0.3);
+  color: var(--accent-blue);
 }
 
 .nav-cta {
@@ -194,6 +304,7 @@ const navLinks = [
   box-shadow: 0 2px 8px rgba(78, 168, 222, 0.25);
   transition: var(--transition);
   white-space: nowrap;
+  text-decoration: none;
 }
 
 .nav-cta:hover {
@@ -222,6 +333,8 @@ const navLinks = [
   height: 36px;
   border-radius: var(--radius-sm);
   transition: var(--transition-fast);
+  border: none;
+  cursor: pointer;
 }
 
 .mobile-menu-btn:hover {
