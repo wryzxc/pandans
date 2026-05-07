@@ -38,25 +38,69 @@ export const projects = [
         goal: '使用 pd.read_csv 处理编码错误与分隔符问题，成功读取多格式CSV文件',
         responsible: '数据分析师',
         timeline: '第1步，预计15分钟',
-        deliverable: '成功加载的DataFrame，无编码报错'
+        deliverable: '成功加载的DataFrame，无编码报错',
+        exampleCode: `# 读取CSV文件，处理编码和分隔符
+import pandas as pd
+
+# 常见读取参数
+df = pd.read_csv('data.csv', encoding='utf-8', sep=',')
+# 或处理编码错误
+df = pd.read_csv('data.csv', encoding='latin1', sep=None, engine='python')
+
+# 数据诊断
+print(df.info())
+print(df.describe())
+print(df.isna().sum())`
       },
       {
         goal: '利用 str.replace + 正则表达式统一 "$1,200.00" 和 "€850.5" 格式并转为数值型',
         responsible: '数据分析师',
         timeline: '第2步，预计20分钟',
-        deliverable: '金额列转换为float类型，所有货币符号和千分位已移除'
+        deliverable: '金额列转换为float类型，所有货币符号和千分位已移除',
+        exampleCode: `import re
+
+def clean_amount(val):
+    if pd.isna(val):
+        return None
+    # 移除非数字和小数点的字符
+    cleaned = re.sub(r'[^\\d.]', '', str(val))
+    return float(cleaned) if cleaned else None
+
+df['amount'] = df['amount'].apply(clean_amount)
+print(df[['order_id', 'amount']])`
       },
       {
         goal: '针对缺失的customer_id，采用"若订单金额>0但ID缺失则标记为Guest_随机数"逻辑填充',
         responsible: '数据分析师',
         timeline: '第3步，预计15分钟',
-        deliverable: 'customer_id列无空值，Guest用户标记符合业务规则'
+        deliverable: 'customer_id列无空值，Guest用户标记符合业务规则',
+        exampleCode: `import random
+
+for idx, row in df.iterrows():
+    if pd.isna(row['customer_id']):
+        if row['amount'] and row['amount'] > 0:
+            df.at[idx, 'customer_id'] = 'Guest_%d' % random.randint(1000, 9999)
+        else:
+            df.at[idx, 'customer_id'] = 'Unknown'
+
+print(df[['order_id', 'customer_id', 'amount']])`
       },
       {
         goal: '使用 pd.to_datetime 强制转换多种日期格式并剔除未来日期',
         responsible: '数据分析师',
         timeline: '第4步，预计15分钟',
-        deliverable: 'order_date列为datetime类型，无未来日期记录'
+        deliverable: 'order_date列为datetime类型，无未来日期记录',
+        exampleCode: `from datetime import datetime
+
+# 自动解析多种日期格式
+df['order_date'] = pd.to_datetime(df['order_date'], errors='coerce')
+
+# 剔除未来日期
+today = datetime.now()
+df = df[df['order_date'] <= today]
+
+print("日期类型:", df['order_date'].dtype)
+print("有效记录:", len(df))`
       }
     ],
 
@@ -321,25 +365,56 @@ print(df)`
         goal: '使用 groupby + pivot_table 将(user_id, action_type)转为宽表列',
         responsible: '数据分析师',
         timeline: '第1步，预计20分钟',
-        deliverable: '宽格式DataFrame，每行一个用户，列为各行为类型计数'
+        deliverable: '宽格式DataFrame，每行一个用户，列为各行为类型计数',
+        exampleCode: `# pivot_table 长转宽
+pivot = df.pivot_table(
+    index='user_id',
+    columns='action',
+    values='timestamp',
+    aggfunc='count',
+    fill_value=0
+)
+pivot.columns = ['%s_count' % col for col in pivot.columns]
+print(pivot)`
       },
       {
         goal: '计算每个用户的行为时间间隔（diff）',
         responsible: '数据分析师',
         timeline: '第2步，预计15分钟',
-        deliverable: '新增time_diff列，显示相邻行为的时间差'
+        deliverable: '新增time_diff列，显示相邻行为的时间差',
+        exampleCode: `# 先按用户和时间排序
+df = df.sort_values(['user_id', 'timestamp'])
+
+# 计算组内时间差
+df['time_diff'] = df.groupby('user_id')['timestamp'].diff()
+print(df[['user_id', 'timestamp', 'time_diff']])`
       },
       {
         goal: '使用 shift + cumsum 实现会话窗口切割（30分钟无操作视为新会话）',
         responsible: '数据分析师',
         timeline: '第3步，预计20分钟',
-        deliverable: '新增session_id列，正确标识每个行为所属会话'
+        deliverable: '新增session_id列，正确标识每个行为所属会话',
+        exampleCode: `# 判断新会话（间隔>30分钟）
+df['new_session'] = df.groupby('user_id')['timestamp'].transform(
+    lambda x: x.diff() > pd.Timedelta('30min')
+)
+# 累计求和生成会话ID
+df['session_id'] = df.groupby('user_id')['new_session'].cumsum()
+print(df[['user_id', 'timestamp', 'session_id']])`
       },
       {
         goal: '处理重塑产生的NaN值，填充为0',
         responsible: '数据分析师',
         timeline: '贯穿全程',
-        deliverable: '宽表中无NaN值，未发生的行为计数为0'
+        deliverable: '宽表中无NaN值，未发生的行为计数为0',
+        exampleCode: `# pivot_table 中设置 fill_value=0
+pivot = df.pivot_table(..., fill_value=0)
+
+# 或事后填充
+df = df.fillna(0)
+
+# 验证无缺失值
+print("缺失值总计:", df.isna().sum().sum())`
       }
     ],
 
@@ -597,25 +672,60 @@ print("会话数:", df['session_id'].nunique())`
         goal: '使用 groupby(\'order_id\')[\'product_name\'].apply(list) 构建购物篮清单',
         responsible: '数据分析师',
         timeline: '第1步，预计15分钟',
-        deliverable: '购物篮DataFrame，每行一个订单包含商品列表'
+        deliverable: '购物篮DataFrame，每行一个订单包含商品列表',
+        exampleCode: `# 按订单分组，将商品聚合为列表
+basket = df.groupby('order_id')['product'].apply(list).reset_index()
+basket.columns = ['order_id', 'items']
+print(basket)`
       },
       {
         goal: '编写循环将清单转为 One-Hot 布尔矩阵',
         responsible: '数据分析师',
         timeline: '第2步，预计20分钟',
-        deliverable: '布尔矩阵DataFrame，行=订单，列=商品，值=是否购买'
+        deliverable: '布尔矩阵DataFrame，行=订单，列=商品，值=是否购买',
+        exampleCode: `# 构建One-Hot布尔矩阵
+all_products = df['product'].unique()
+one_hot = {}
+for _, row in basket.iterrows():
+    for prod in all_products:
+        one_hot.setdefault(prod, []).append(prod in row['items'])
+
+matrix = pd.DataFrame(one_hot)
+print(matrix)`
       },
       {
         goal: '计算支持度（Support）与置信度（Confidence）',
         responsible: '数据分析师',
         timeline: '第3步，预计25分钟',
-        deliverable: '支持度字典和置信度字典，包含所有商品对的指标'
+        deliverable: '支持度字典和置信度字典，包含所有商品对的指标',
+        exampleCode: `total_orders = len(basket)
+support = {prod: matrix[prod].mean() for prod in all_products}
+
+confidence = {}
+for p1 in all_products:
+    for p2 in all_products:
+        if p1 != p2:
+            both = ((matrix[p1]) & (matrix[p2])).sum()
+            if matrix[p1].sum() > 0:
+                confidence['%s→%s' % (p1, p2)] = both / matrix[p1].sum()
+
+print("支持度:", support)
+print("置信度Top5:", sorted(confidence.items(), key=lambda x: -x[1])[:5])`
       },
       {
         goal: '利用 Pandas merge 实现"若购买A则购买B"的规则筛选',
         responsible: '数据分析师',
         timeline: '第4步，预计20分钟',
-        deliverable: 'Top5关联规则列表，包含规则表达式和置信度'
+        deliverable: 'Top5关联规则列表，包含规则表达式和置信度',
+        exampleCode: `# 按置信度排序获取Top规则
+rules = sorted(confidence.items(), key=lambda x: -x[1])[:5]
+for rule, conf in rules:
+    print("  %s: %.1f%%" % (rule, conf * 100))
+
+# 设定阈值筛选有效规则
+min_confidence = 0.3
+valid_rules = [(r, c) for r, c in confidence.items() if c >= min_confidence]
+print("有效规则数:", len(valid_rules))`
       }
     ],
 
@@ -767,25 +877,57 @@ print("最强关联:", sorted(confidence.items(), key=lambda x: -x[1])[:3])`
         goal: '计算 R (最近消费间隔): datetime.now() - max(date)',
         responsible: '数据分析师',
         timeline: '第1步，预计15分钟',
-        deliverable: 'Recency列，单位：天'
+        deliverable: 'Recency列，单位：天',
+        exampleCode: `from datetime import datetime
+
+analysis_date = datetime(2024, 9, 1)
+rfm = df.groupby('customer_id').agg({
+    'date': lambda x: (analysis_date - x.max()).days,
+    'order_id': 'nunique',
+    'amount': 'sum'
+}).rename(columns={'date': 'Recency', 'order_id': 'Frequency', 'amount': 'Monetary'})
+print(rfm)`
       },
       {
         goal: '计算 F (消费频率): nunique(\'order_id\')',
         responsible: '数据分析师',
         timeline: '第2步，预计10分钟',
-        deliverable: 'Frequency列，单位：次'
+        deliverable: 'Frequency列，单位：次',
+        exampleCode: `# Frequency 已在 agg 中通过 'order_id': 'nunique' 计算
+# 也可以单独计算
+freq = df.groupby('customer_id')['order_id'].nunique()
+print("消费频率:", freq)`
       },
       {
         goal: '计算 M (消费金额): sum(\'amount\')',
         responsible: '数据分析师',
         timeline: '第3步，预计10分钟',
-        deliverable: 'Monetary列，单位：元'
+        deliverable: 'Monetary列，单位：元',
+        exampleCode: `# Monetary 已在 agg 中通过 'amount': 'sum' 计算
+# 也可以单独计算
+monetary = df.groupby('customer_id')['amount'].sum()
+print("消费总额:", monetary)`
       },
       {
         goal: '使用 pd.qcut 将 R/F/M 分别分为 4 级，拼凑出 RFM_Score',
         responsible: '数据分析师',
         timeline: '第4步，预计20分钟',
-        deliverable: 'RFM评分表，包含R/F/M分数和综合分层结果'
+        deliverable: 'RFM评分表，包含R/F/M分数和综合分层结果',
+        exampleCode: `# qcut分箱评分 (R越小越好，分数反转)
+rfm['R_score'] = pd.qcut(rfm['Recency'], 4, labels=[4,3,2,1], duplicates='drop')
+rfm['F_score'] = pd.qcut(rfm['Frequency'].rank(method='first'), 4, labels=[1,2,3,4], duplicates='drop')
+rfm['M_score'] = pd.qcut(rfm['Monetary'].rank(method='first'), 4, labels=[1,2,3,4], duplicates='drop')
+
+rfm['RFM_sum'] = rfm['R_score'].astype(int) + rfm['F_score'].astype(int) + rfm['M_score'].astype(int)
+
+# 客户分层
+def segment(row):
+    if row['R_score'] >= 3 and row['F_score'] >= 3: return '高价值活跃'
+    elif row['R_score'] == 1: return '流失预警'
+    else: return '普通用户'
+
+rfm['segment'] = rfm.apply(segment, axis=1)
+print(rfm[['Recency','Frequency','Monetary','segment']])`
       }
     ],
 
@@ -941,25 +1083,61 @@ print("RFM分层完成, 客户数:", len(rfm))`
         goal: '使用 Pandas 对 RFM 特征进行 Z-Score 标准化 ((x-mean)/std)',
         responsible: '数据分析师',
         timeline: '第1步，预计15分钟',
-        deliverable: '标准化后的特征DataFrame，各列均值为0、标准差为1'
+        deliverable: '标准化后的特征DataFrame，各列均值为0、标准差为1',
+        exampleCode: `features = ['Recency', 'Frequency', 'Monetary']
+for f in features:
+    df['%s_z' % f] = (df[f] - df[f].mean()) / df[f].std()
+
+print("标准化后均值:", df[['Recency_z', 'Frequency_z', 'Monetary_z']].mean())
+print("标准化后标准差:", df[['Recency_z', 'Frequency_z', 'Monetary_z']].std())`
       },
       {
         goal: '调用 sklearn.cluster.KMeans 进行聚类（n=5）',
         responsible: '数据分析师',
         timeline: '第2步，预计20分钟',
-        deliverable: '每个用户的簇标签（0-4）'
+        deliverable: '每个用户的簇标签（0-4）',
+        exampleCode: `from sklearn.cluster import KMeans
+
+X = df[['Recency_z', 'Frequency_z', 'Monetary_z']].values
+kmeans = KMeans(n_clusters=5, random_state=42, n_init=10)
+df['cluster'] = kmeans.fit_predict(X)
+
+print('各簇大小:')
+print(df['cluster'].value_counts().sort_index())`
       },
       {
         goal: '使用 df.groupby(\'cluster\') 统计每个簇的 RFM 均值',
         responsible: '数据分析师',
         timeline: '第3步，预计15分钟',
-        deliverable: '簇特征统计表，每行一个簇的R/F/M均值'
+        deliverable: '簇特征统计表，每行一个簇的R/F/M均值',
+        exampleCode: `cluster_stats = df.groupby('cluster').agg({
+    'Recency': 'mean',
+    'Frequency': 'mean',
+    'Monetary': 'mean'
+}).round(1)
+
+print('各簇RFM均值:')
+print(cluster_stats)`
       },
       {
         goal: '用文字描述每个簇的业务特征',
         responsible: '数据分析师',
         timeline: '第4步，预计20分钟',
-        deliverable: '5个簇的业务标签（如"高价值活跃"、"低价值沉睡"）'
+        deliverable: '5个簇的业务标签（如"高价值活跃"、"低价值沉睡"）',
+        exampleCode: `cluster_labels = {
+    0: '高价值活跃用户',
+    1: '低价值沉睡用户',
+    2: '中价值稳定用户',
+    3: '高价值流失预警',
+    4: '新晋潜力用户'
+}
+
+for c in range(5):
+    cnt = (df['cluster'] == c).sum()
+    stats = cluster_stats.loc[c]
+    label = cluster_labels.get(c, '未分类')
+    print('簇%d [%s]: %d人 | R=%.0f天 F=%.1f次 M=$%.0f' % (
+        c, label, cnt, stats['Recency'], stats['Frequency'], stats['Monetary']))`
       }
     ],
 
@@ -1119,25 +1297,68 @@ print("聚类完成, 各簇人数:", df['cluster'].value_counts().to_dict())`
         goal: '使用 resample(\'H\') 按小时汇总订单额',
         responsible: '数据分析师',
         timeline: '第1步，预计10分钟',
-        deliverable: '按小时聚合的GMV时间序列'
+        deliverable: '按小时聚合的GMV时间序列',
+        exampleCode: `# 按小时聚合GMV
+df['order_time'] = pd.to_datetime(df['order_time'])
+df = df.set_index('order_time')
+
+hourly_gmv = df['amount'].resample('h').sum()
+print('按小时聚合的GMV:')
+print(hourly_gmv.head())`
       },
       {
         goal: '使用 rolling(window=24) 计算移动平均值与标准差',
         responsible: '数据分析师',
         timeline: '第2步，预计15分钟',
-        deliverable: '滚动均值和滚动标准差时间序列'
+        deliverable: '滚动均值和滚动标准差时间序列',
+        exampleCode: `# 24小时滚动均值和标准差
+rolling_mean = hourly_gmv.rolling(window=24, min_periods=1).mean()
+rolling_std = hourly_gmv.rolling(window=24, min_periods=1).std().fillna(0)
+
+# 计算上下界 (mu +/- 2*sigma)
+lower = rolling_mean - 2 * rolling_std
+upper = rolling_mean + 2 * rolling_std
+
+print('滚动均值:', rolling_mean.tail())
+print('滚动标准差:', rolling_std.tail())`
       },
       {
         goal: '自定义函数找出 (实际值 < 均值 - 2*标准差) 的异常时间点',
         responsible: '数据分析师',
         timeline: '第3步，预计20分钟',
-        deliverable: '异常时间点列表，包含时间、实际值、偏离度、异常类型'
+        deliverable: '异常时间点列表，包含时间、实际值、偏离度、异常类型',
+        exampleCode: `anomalies = []
+for idx in hourly_gmv.index:
+    val = hourly_gmv.loc[idx]
+    mean = rolling_mean.loc[idx]
+    std = rolling_std.loc[idx]
+    if std > 0:
+        if val < mean - 2 * std or val > mean + 2 * std:
+            anomalies.append({
+                'time': idx,
+                'value': val,
+                'mean': "%.0f" % mean,
+                'deviation': "%.0f" % (val - mean)
+            })
+
+print('发现 %d 个异常点' % len(anomalies))`
       },
       {
         goal: '标注异常为"突刺"或"断崖"',
         responsible: '数据分析师',
         timeline: '第4步，预计10分钟',
-        deliverable: '带异常类型标注的完整报告'
+        deliverable: '带异常类型标注的完整报告',
+        exampleCode: `# 标注异常类型：突刺(Spike) 或 断崖(Drop)
+for a in anomalies:
+    if a['value'] > float(a['mean']):
+        a['type'] = '突刺'
+    else:
+        a['type'] = '断崖'
+
+print('异常检测报告:')
+for a in anomalies:
+    print('[%s] %s | GMV: $%.0f | 偏离: %s' % (
+        a['type'], a['time'], a['value'], a['deviation']))`
       }
     ],
 
@@ -1284,25 +1505,74 @@ for a in anomalies:
         goal: '使用 merge_asof 根据时间戳将点击流与订单数据做非精确匹配',
         responsible: '数据分析师',
         timeline: '第1步，预计25分钟',
-        deliverable: '归因关联表，每个订单关联到最近的点击记录'
+        deliverable: '归因关联表，每个订单关联到最近的点击记录',
+        exampleCode: `# 分别按时间排序 (merge_asof 的前置条件)
+clicks = clicks.sort_values('click_time')
+orders = orders.sort_values('order_time')
+
+# 非精确时间匹配 (取订单前最近的点击)
+attribution = pd.merge_asof(
+    orders,
+    clicks,
+    left_on='order_time',
+    right_on='click_time',
+    by='user_id',
+    direction='backward'
+)
+
+print('归因关联结果:')
+print(attribution[['user_id', 'order_time', 'channel', 'amount']])`
       },
       {
         goal: '处理一对多关系：一个订单只归因给点击流中最近的那一条',
         responsible: '数据分析师',
         timeline: '第2步，预计15分钟',
-        deliverable: '唯一归因结果，每个订单对应一个渠道'
+        deliverable: '唯一归因结果，每个订单对应一个渠道',
+        exampleCode: `# 按用户和订单去重，保留最近一次点击
+attribution = attribution.drop_duplicates(
+    subset=['user_id', 'order_time'],
+    keep='first'
+)
+
+# 验证一对一关系
+dup_count = attribution.duplicated(subset='order_time').sum()
+print('重复归因订单数:', dup_count)
+print('归因记录数:', len(attribution))`
       },
       {
         goal: '使用 crosstab 生成渠道转化漏斗表',
         responsible: '数据分析师',
         timeline: '第3步，预计15分钟',
-        deliverable: '渠道×用户的转化交叉表'
+        deliverable: '渠道×用户的转化交叉表',
+        exampleCode: `# 渠道-用户转化交叉表
+funnel = pd.crosstab(
+    attribution['channel'],
+    attribution['user_id'],
+    values=attribution['amount'],
+    aggfunc='sum'
+)
+
+print('渠道转化交叉表:')
+print(funnel)
+print('\\n各渠道覆盖用户数:', (funnel > 0).sum(axis=1))`
       },
       {
         goal: '计算各渠道 ROI = (revenue - cost) / cost',
         responsible: '数据分析师',
         timeline: '第4步，预计15分钟',
-        deliverable: '渠道ROI报告，包含订单数、收入、成本、ROI'
+        deliverable: '渠道ROI报告，包含订单数、收入、成本、ROI',
+        exampleCode: `# 按渠道聚合统计
+stats = attribution.groupby('channel').agg(
+    orders=('user_id', 'count'),
+    revenue=('amount', 'sum'),
+    cost=('cost', 'sum')
+)
+
+# ROI = (收益 - 成本) / 成本
+stats['roi'] = (stats['revenue'] - stats['cost']) / stats['cost']
+
+print('渠道ROI报告:')
+print(stats.round(2))`
       }
     ],
 
@@ -1471,25 +1741,68 @@ print("渠道ROI:", channel_stats['roi'].to_dict())`
         goal: '使用 Pandas 的 str 方法去除评论中的 HTML 标签、表情符号',
         responsible: '数据分析师',
         timeline: '第1步，预计20分钟',
-        deliverable: '清洗后的纯文本评论'
+        deliverable: '清洗后的纯文本评论',
+        exampleCode: `import re
+
+def clean_text(text):
+    if pd.isna(text):
+        return ''
+    # 去除HTML标签
+    text = re.sub(r'<[^>]+>', '', str(text))
+    # 保留中文、英文、数字和常见标点
+    text = re.sub(r'[^\\u4e00-\\u9fa5a-zA-Z0-9\\s，。！？]', '', text)
+    return text.strip()
+
+df['clean'] = df['comment'].apply(clean_text)
+print('清洗前后对比:')
+print(df[['comment', 'clean']].head())`
       },
       {
         goal: '将评论文本按空格切分为词列表（str.split()）',
         responsible: '数据分析师',
         timeline: '第2步，预计15分钟',
-        deliverable: '每条评论对应的词列表'
+        deliverable: '每条评论对应的词列表',
+        exampleCode: `# 按字符切分为词列表 (中文无天然空格，按字符切分)
+df['words'] = df['clean'].apply(
+    lambda x: list(x) if x else []
+)
+
+print('分词结果:')
+print(df[['user', 'clean', 'words']].head())
+print('第一条评论词数:', len(df['words'].iloc[0]))`
       },
       {
         goal: '将列表列的 NaN 填充为空列表[]，防止 AI 模型报错',
         responsible: '数据分析师',
         timeline: '第3步，预计10分钟',
-        deliverable: '无NaN的词列表列'
+        deliverable: '无NaN的词列表列',
+        exampleCode: `# 将 NaN 填充为空列表（列表列不能用 fillna([])）
+df['words'] = df['words'].apply(
+    lambda x: x if isinstance(x, list) else []
+)
+
+# 验证无 NaN 和空列表
+print('words列NaN数量:', df['words'].isna().sum())
+print('空列表数量:', (df['words'].apply(len) == 0).sum())`
       },
       {
         goal: '停用词过滤，移除无意义高频词',
         responsible: '数据分析师',
         timeline: '第4步，预计15分钟',
-        deliverable: '过滤后的有效词列表'
+        deliverable: '过滤后的有效词列表',
+        exampleCode: `# 定义中文停用词
+stop_words = {'的', '了', '吧', '是', '太', '很', '这', '那', '还'}
+
+# 过滤停用词
+df['filtered'] = df['words'].apply(
+    lambda words: [w for w in words if w not in stop_words]
+)
+
+print('过滤前后对比:')
+for _, row in df.head(3).iterrows():
+    print('  %s -> %s' % (''.join(row['words']), ''.join(row['filtered'])))
+print('过滤前总词数:', df['words'].apply(len).sum())
+print('过滤后总词数:', df['filtered'].apply(len).sum())`
       }
     ],
 
@@ -1644,19 +1957,58 @@ print("分词完成, 有效评论数:", (df['clean'] != '').sum())`
         goal: '计算单品销售额 groupby(\'product\')[\'amount\'].sum()',
         responsible: '数据分析师',
         timeline: '第1步，预计10分钟',
-        deliverable: '各商品销售额汇总'
+        deliverable: '各商品销售额汇总',
+        exampleCode: `# 计算单品销售额并降序排列
+product_sales = df.groupby('product')['amount'].sum()
+product_sales = product_sales.sort_values(ascending=False)
+
+print('商品销售额排名:')
+print(product_sales)
+print('\\nTop 5 商品贡献:')
+print(product_sales.head())`
       },
       {
         goal: '降序排列后计算累计占比：cumsum() / total',
         responsible: '数据分析师',
         timeline: '第2步，预计15分钟',
-        deliverable: '累计销售额和累计占比列'
+        deliverable: '累计销售额和累计占比列',
+        exampleCode: `# 计算累计销售额和累计占比
+total = product_sales.sum()
+cum_sales = product_sales.cumsum()
+cum_pct = cum_sales / total * 100
+
+pareto = pd.DataFrame({
+    'product': product_sales.index,
+    'sales': product_sales.values,
+    'cum_sales': cum_sales.values,
+    'cum_pct': cum_pct.values.round(1)
+})
+
+print('帕累托表:')
+print(pareto)
+print('\\n前20%%商品累计占比: %.1f%%' % pareto.iloc[3]['cum_pct'])`
       },
       {
         goal: '根据累计占比阈值（<80%）将商品分类',
         responsible: '数据分析师',
         timeline: '第3步，预计15分钟',
-        deliverable: '带分类标签的商品贡献度报告'
+        deliverable: '带分类标签的商品贡献度报告',
+        exampleCode: `def classify(pct):
+    if pct <= 80:
+        return '爆款'
+    elif pct <= 95:
+        return '腰部'
+    else:
+        return '长尾'
+
+pareto['category'] = pareto['cum_pct'].apply(classify)
+
+print('商品分类统计:')
+print(pareto['category'].value_counts())
+for cat in ['爆款', '腰部', '长尾']:
+    subset = pareto[pareto['category'] == cat]
+    print('%s: %d件, 贡献%.1f%%' % (
+        cat, len(subset), subset['sales'].sum() / total * 100))`
       }
     ],
 
@@ -1806,19 +2158,74 @@ print("爆款贡献:", "%.1f%%" % (pareto[pareto['category']=='爆款']['sales']
         goal: '构建商品共现矩阵（Pandas实现矩阵乘法：df.T.dot(df)），找出强关联Top10商品对',
         responsible: '数据分析师',
         timeline: '第1步，预计30分钟',
-        deliverable: '商品共现矩阵 + Top10关联商品对列表'
+        deliverable: '商品共现矩阵 + Top10关联商品对列表',
+        exampleCode: `# 构建品类×订单交叉表
+pivot = pd.crosstab(df['order_id'], df['category'])
+
+# 矩阵乘法得共现矩阵 (品类×品类)
+cooccur = pivot.T.dot(pivot)
+np.fill_diagonal(cooccur.values, 0)
+
+# 找 Top10 强关联商品对
+pairs = []
+for c1 in cooccur.columns:
+    for c2 in cooccur.columns:
+        if c1 < c2:
+            pairs.append((c1, c2, cooccur.loc[c1, c2]))
+pairs.sort(key=lambda x: -x[2])
+
+print('Top 10 强关联商品对:')
+for c1, c2, v in pairs[:10]:
+    print('  %s + %s: %d次共现' % (c1, c2, v))`
       },
       {
         goal: '基于用户购买品类偏好（用crosstab做One-Hot）进行K-Means聚类',
         responsible: '数据分析师',
         timeline: '第2步，预计30分钟',
-        deliverable: '用户聚类结果 + 各簇品类偏好特征'
+        deliverable: '用户聚类结果 + 各簇品类偏好特征',
+        exampleCode: `from sklearn.cluster import KMeans
+
+# 构建用户偏好特征矩阵并标准化
+user_pref = pd.crosstab(df['order_id'], df['category'])
+user_norm = (user_pref - user_pref.mean()) / user_pref.std()
+
+# K-Means 聚类
+kmeans = KMeans(n_clusters=3, random_state=42, n_init=10)
+user_pref['cluster'] = kmeans.fit_predict(user_norm.values)
+
+print('各簇品类偏好均值:')
+for c in range(3):
+    cluster = user_pref[user_pref['cluster'] == c]
+    print('\\n簇%d (%d个用户):' % (c, len(cluster)))
+    print(cluster.mean().drop('cluster').round(2))`
       },
       {
         goal: '撰写数据解读报告',
         responsible: '数据分析师',
         timeline: '第3步，预计30分钟',
-        deliverable: 'Markdown格式分析结论，包含业务建议'
+        deliverable: 'Markdown格式分析结论，包含业务建议',
+        exampleCode: `# 生成 Markdown 格式分析报告
+report = []
+report.append('# 购物篮聚类与个性化推荐报告')
+report.append('')
+report.append('## 1. 强关联商品对 (Top 5)')
+for i, (c1, c2, v) in enumerate(pairs[:5], 1):
+    report.append('- %d. **%s + %s**: %d次共现' % (i, c1, c2, v))
+
+report.append('')
+report.append('## 2. 用户聚类分析')
+for c in range(3):
+    cluster = user_pref[user_pref['cluster'] == c]
+    top_cat = cluster.mean().drop('cluster').idxmax()
+    report.append('- **簇%d**: %d人, 偏好品类: %s' % (
+        c, len(cluster), top_cat))
+
+report.append('')
+report.append('## 3. 业务建议')
+report.append('- 利用强关联商品对做交叉销售推荐')
+report.append('- 针对各簇偏好推送个性化优惠券')
+
+print('\\n'.join(report))`
       }
     ],
 

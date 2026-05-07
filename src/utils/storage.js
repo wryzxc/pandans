@@ -1,12 +1,13 @@
 const STORAGE_KEY = 'pandaslab_progress'
 
-export function saveProgress(projectId, code, progress, status) {
+export function saveProgress(projectId, code, progress, status, extra = {}) {
   const data = getAllProgress()
   data[projectId] = {
     code,
     progress,
     status,
-    lastEdited: new Date().toISOString()
+    lastEdited: new Date().toISOString(),
+    ...extra
   }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
 }

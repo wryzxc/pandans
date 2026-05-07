@@ -1,14 +1,16 @@
-<script setup>
+<script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { gradeCode, formatGradeResult } from '../utils/codeGrader.js'
 
 const props = defineProps({
   code: { type: String, default: '' },
   referenceCode: { type: String, default: '' },
-  project: { type: Object, default: null }
+  project: { type: Object, default: null },
+  taskCompleted: { type: Array, default: () => [] },
+  allTasksComplete: { type: Boolean, default: false }
 })
 
-const emit = defineEmits(['output'])
+const emit = defineEmits(['output', 'markStepComplete'])
 
 const outputRef = ref('')
 const isRunning = ref(false)
@@ -16,6 +18,14 @@ const pyodideReady = ref(false)
 const showGrading = ref(false)
 const gradeResult = ref(null)
 const activeReportTab = ref('overview')
+const taskFeedback = ref('')
+
+function showFeedback(msg: string) {
+  taskFeedback.value = msg
+  if (msg) {
+    setTimeout(() => { taskFeedback.value = '' }, 8000)
+  }
+}
 
 const isValidCode = computed(() => {
   if (!props.code || typeof props.code !== 'string') return false
@@ -154,25 +164,47 @@ onMounted(() => {
   }
 })
 
-defineExpose({ runCode })
+defineExpose({ runCode, showFeedback })
 </script>
 
 <template>
   <div class="preview-panel">
     <div class="preview-header">
       <span>📺 输出结果</span>
-      <button
-        class="btn btn-primary btn-sm"
-        @click="runCode"
-        :disabled="!isValidCode || isRunning"
-        :class="{ 'btn-disabled': !isValidCode || isRunning }"
-      >
-        {{ isRunning ? '⏳ 执行中...' : '▶ 运行' }}
-      </button>
+      <div class="preview-header-actions">
+        <button
+          v-if="outputRef && !allTasksComplete"
+          class="btn btn-success btn-sm mark-done-btn"
+          @click="$emit('markStepComplete')"
+          title="确认当前步骤输出正确，标记为完成并跳转下一步"
+        >
+          ✅ 标记步骤完成
+        </button>
+        <button
+          class="btn btn-primary btn-sm"
+          @click="runCode"
+          :disabled="!isValidCode || isRunning"
+          :class="{ 'btn-disabled': !isValidCode || isRunning }"
+        >
+          {{ isRunning ? '⏳ 执行中...' : '▶ 运行' }}
+        </button>
+      </div>
     </div>
+    <!-- Task completion feedback -->
+    <div v-if="taskFeedback" class="task-feedback-banner">
+      {{ taskFeedback }}
+    </div>
+
     <div class="output-area">
-      <pre v-if="!isValidCode && !outputRef" class="output-hint">请输入有效的 Python 代码后点击"运行"</pre>
-      <pre class="output-text">{{ outputRef }}</pre>
+      <div v-if="!outputRef" class="output-hint-box">
+        <div class="hint-icon">📋</div>
+        <div class="hint-title">任务指引</div>
+        <div class="hint-text">将以下代码填入编辑器，点击运行。<br>输出结果将显示在此处。</div>
+        <div class="hint-shortcuts">
+          <span class="shortcut-key">Ctrl+Enter</span> 快速运行
+        </div>
+      </div>
+      <pre v-else class="output-text">{{ outputRef }}</pre>
     </div>
 
     <!-- 自动评分面板 -->
@@ -438,6 +470,21 @@ defineExpose({ runCode })
   flex-shrink: 0;
 }
 
+.preview-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mark-done-btn {
+  animation: pulseMark 2s infinite;
+}
+
+@keyframes pulseMark {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(74, 222, 128, 0); }
+}
+
 .btn-sm {
   padding: 6px 14px;
   font-size: 13px;
@@ -450,12 +497,77 @@ defineExpose({ runCode })
   pointer-events: none;
 }
 
+.task-feedback-banner {
+  padding: 10px 16px;
+  margin: 0;
+  background: linear-gradient(135deg, rgba(74, 222, 128, 0.1), rgba(78, 168, 222, 0.05));
+  border-bottom: 1px solid rgba(74, 222, 128, 0.2);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--accent-green);
+  text-align: center;
+  animation: fadeIn 0.3s ease;
+  flex-shrink: 0;
+}
+
 .output-area {
   flex: 1;
   overflow: auto;
   padding: 16px 20px;
   position: relative;
   min-height: 120px;
+}
+
+.output-hint-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 20px;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.hint-icon {
+  font-size: 40px;
+  margin-bottom: 12px;
+  opacity: 0.6;
+}
+
+.hint-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.hint-text {
+  font-size: 13px;
+  line-height: 1.8;
+  color: var(--text-secondary);
+  max-width: 360px;
+}
+
+.hint-text strong {
+  color: var(--accent-blue);
+  font-weight: 600;
+}
+
+.hint-shortcuts {
+  margin-top: 14px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.shortcut-key {
+  display: inline-block;
+  padding: 2px 8px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--accent-blue);
 }
 
 .output-hint {
