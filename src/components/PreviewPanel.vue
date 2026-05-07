@@ -69,8 +69,8 @@ async function ensurePyodideLoaded() {
       indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.25.1/full/'
     })
     window.pyodideInstance = pyodide
-    await pyodide.loadPackage('pandas')
-    await pyodide.loadPackage('numpy')
+    await pyodide.loadPackage(['pandas'])
+    await pyodide.loadPackage(['numpy'])
     pyodideReady.value = true
   }
 }
