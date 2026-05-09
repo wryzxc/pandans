@@ -550,30 +550,14 @@ const bgSections: Record<string, string> = {
   industryData: '📊 行业数据与政策'
 }
 
-// Concept hover card state
-const hoveredConcept = ref<string | null>(null)
-const hoverCardStyle = ref({ top: '0px', left: '0px' })
+// Concept accordion state
+const expandedConcept = ref<string | null>(null)
 
-function showConceptCard(term: string, event: MouseEvent) {
-  hoveredConcept.value = term
-  const target = event.currentTarget as HTMLElement
-  const rect = target.getBoundingClientRect()
-  const docPanel = target.closest('.doc-content') as HTMLElement
-  if (docPanel) {
-    const panelRect = docPanel.getBoundingClientRect()
-    hoverCardStyle.value = {
-      top: (rect.bottom - panelRect.top + 6) + 'px',
-      left: Math.min(rect.left - panelRect.left, panelRect.width - 260) + 'px'
-    }
-  }
-}
-
-function hideConceptCard() {
-  hoveredConcept.value = null
+function toggleConcept(term: string) {
+  expandedConcept.value = expandedConcept.value === term ? null : term
 }
 
 function getConciseDef(def: string): string {
-  // Extract first sentence or key formula
   const sentences = def.split(/[。；]/)
   return sentences[0] || def.slice(0, 100)
 }
@@ -589,6 +573,11 @@ function getConceptFormula(term: string, def: string): string {
     if (match) return match[1].trim()
   }
   return ''
+}
+
+function getConceptFullDef(def: string): string {
+  const stripped = def.replace(/^[^：:]*[：:]\s*/, '')
+  return stripped || def
 }
 
 // Template code loading
@@ -918,38 +907,33 @@ function autoDetectCriteria(outputText: string) {
             </div>
           </div>
 
-          <!-- 4. Concepts (default collapsed) -->
+          <!-- 4. Concepts - Individual accordion dropdowns -->
           <div v-if="project?.concepts" class="doc-section">
             <div class="section-collapse-header" :class="{ collapsed: sectionCollapsed.concepts }" @click="toggleSection('concepts')">
               <span class="collapse-arrow">{{ sectionCollapsed.concepts ? '▶' : '▼' }}</span>
               <span class="section-label">🔍 概念解析</span>
+              <span class="section-badge">{{ Object.keys(project.concepts.definitions).length }} 个概念</span>
             </div>
             <div v-if="!sectionCollapsed.concepts" class="section-body">
-              <div v-for="(definition, term) in project.concepts.definitions" :key="term" class="concept-item">
-                <h4>
-                  {{ term }}
-                  <span
-                    class="concept-help-icon"
-                    @mouseenter="showConceptCard(term as string, $event)"
-                    @mouseleave="hideConceptCard"
-                  >?</span>
-                </h4>
-              </div>
-              <!-- Hover Card -->
-              <Teleport to="body">
-                <div
-                  v-if="hoveredConcept"
-                  class="concept-hover-card"
-                  :style="{ position: 'fixed', top: hoverCardStyle.top, left: hoverCardStyle.left }"
-                  @mouseleave="hideConceptCard"
-                >
-                  <div class="hover-card-term">{{ hoveredConcept }}</div>
-                  <div class="hover-card-def">{{ getConciseDef(project.concepts.definitions[hoveredConcept] || '') }}</div>
-                  <div v-if="getConceptFormula(hoveredConcept, project.concepts.definitions[hoveredConcept] || '')" class="hover-card-formula">
-                    📐 {{ getConceptFormula(hoveredConcept, project.concepts.definitions[hoveredConcept] || '') }}
+              <div
+                v-for="(definition, term) in project.concepts.definitions"
+                :key="term"
+                class="concept-item"
+                :class="{ 'concept-open': expandedConcept === term }"
+              >
+                <div class="concept-item-header" @click="toggleConcept((term as string))">
+                  <span class="concept-toggle-icon">{{ expandedConcept === term ? '▾' : '▸' }}</span>
+                  <h4>{{ term }}</h4>
+                  <span class="concept-badge">点击查看详情</span>
+                </div>
+                <div v-if="expandedConcept === term" class="concept-item-body">
+                  <div class="concept-full-def">{{ getConceptFullDef(project.concepts.definitions[term]) }}</div>
+                  <div v-if="getConceptFormula((term as string), project.concepts.definitions[term])" class="concept-formula">
+                    <span class="formula-label">📐 公式</span>
+                    <code>{{ getConceptFormula((term as string), project.concepts.definitions[term]) }}</code>
                   </div>
                 </div>
-              </Teleport>
+              </div>
             </div>
           </div>
 
@@ -1431,13 +1415,13 @@ function autoDetectCriteria(outputText: string) {
 .section-collapse-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
+  gap: 10px;
+  padding: 10px 14px;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: var(--transition-fast);
+  transition: all 0.2s ease;
   user-select: none;
 }
 
@@ -1459,15 +1443,15 @@ function autoDetectCriteria(outputText: string) {
 }
 
 .section-label {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--text-primary);
   flex: 1;
 }
 
 .section-badge {
-  font-size: 10px;
-  padding: 2px 8px;
+  font-size: 11px;
+  padding: 2px 10px;
   border-radius: var(--radius-full);
   background: rgba(139, 148, 158, 0.15);
   color: var(--text-muted);
@@ -1492,14 +1476,14 @@ function autoDetectCriteria(outputText: string) {
 
 /* Section body */
 .section-body {
-  padding: 10px 0 10px 20px;
-  animation: slideDown 0.2s ease;
+  padding: 12px 0 12px 24px;
+  animation: slideDown 0.25s ease;
 }
 
 .section-body p {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-secondary);
-  line-height: 1.6;
+  line-height: 1.7;
   margin-bottom: 8px;
 }
 
@@ -1515,6 +1499,19 @@ function autoDetectCriteria(outputText: string) {
   border-bottom: 1px solid var(--border-color);
 }
 
+.bg-desc h4 {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+
+.bg-desc p {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
 .bg-sub-section {
   margin-bottom: 4px;
 }
@@ -1523,9 +1520,9 @@ function autoDetectCriteria(outputText: string) {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 8px;
+  padding: 6px 10px;
   cursor: pointer;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
   color: var(--text-primary);
   border-radius: 4px;
@@ -1535,10 +1532,10 @@ function autoDetectCriteria(outputText: string) {
 .bg-sub-header:hover { background: var(--bg-tertiary); }
 
 .bg-sub-text {
-  padding: 4px 8px 4px 24px;
-  font-size: 12px;
+  padding: 6px 10px 6px 26px;
+  font-size: 13px;
   color: var(--text-muted);
-  line-height: 1.5;
+  line-height: 1.6;
 }
 
 .collapse-arrow.small {
@@ -1638,10 +1635,10 @@ function autoDetectCriteria(outputText: string) {
 }
 
 .task-card-body p {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-secondary);
-  margin-bottom: 6px;
-  line-height: 1.5;
+  margin-bottom: 8px;
+  line-height: 1.6;
 }
 
 .task-goal { font-weight: 600; color: var(--text-primary); }
@@ -1771,43 +1768,121 @@ function autoDetectCriteria(outputText: string) {
   overflow: hidden;
 }
 
-/* Concept items */
+/* Concept items - Accordion dropdown style */
 .concept-item {
-  padding: 8px 12px;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
-  margin-bottom: 6px;
+  margin-bottom: 8px;
+  overflow: hidden;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.concept-item h4 {
-  font-size: 13px;
-  color: var(--accent-blue);
-  font-weight: 600;
+.concept-item:hover {
+  border-color: rgba(78, 168, 222, 0.3);
+}
+
+.concept-item.concept-open {
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 12px rgba(78, 168, 222, 0.08);
+}
+
+.concept-item-header {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  padding: 10px 14px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.2s ease;
 }
 
-.tooltip-trigger {
-  cursor: help;
-  font-size: 12px;
-  opacity: 0.5;
-  transition: opacity 0.2s;
+.concept-item-header:hover {
+  background: var(--bg-tertiary);
 }
 
-.tooltip-trigger:hover { opacity: 1; }
-
-/* Sub section */
-.sub-section {
-  margin-bottom: 10px;
-}
-
-.sub-section h4 {
-  font-size: 12px;
-  margin-bottom: 4px;
-  color: var(--text-primary);
+.concept-item-header h4 {
+  font-size: 14px;
+  color: var(--accent-blue);
   font-weight: 600;
+  flex: 1;
+  margin: 0;
+}
+
+.concept-toggle-icon {
+  font-size: 12px;
+  color: var(--text-muted);
+  width: 16px;
+  flex-shrink: 0;
+  transition: transform 0.25s ease;
+}
+
+.concept-badge {
+  font-size: 11px;
+  color: var(--text-muted);
+  opacity: 0;
+  transform: translateX(4px);
+  transition: all 0.2s ease;
+}
+
+.concept-item-header:hover .concept-badge {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.concept-item-body {
+  padding: 0 14px 14px 38px;
+  animation: conceptSlideIn 0.3s ease;
+}
+
+@keyframes conceptSlideIn {
+  from {
+    opacity: 0;
+    max-height: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    max-height: 600px;
+    transform: translateY(0);
+  }
+}
+
+.concept-full-def {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.8;
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+  border-left: 2px solid var(--accent-blue);
+}
+
+.concept-formula {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(74, 222, 128, 0.06);
+  border: 1px solid rgba(74, 222, 128, 0.2);
+  border-radius: var(--radius-sm);
+  margin-bottom: 4px;
+}
+
+.formula-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent-green);
+  flex-shrink: 0;
+}
+
+.concept-formula code {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--accent-green);
+  background: transparent;
+  padding: 0;
 }
 
 /* Doc tabs */
@@ -1822,11 +1897,11 @@ function autoDetectCriteria(outputText: string) {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 10px 18px;
+  padding: 12px 20px;
   border: none;
   background: transparent;
   color: var(--text-muted);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -1946,75 +2021,19 @@ function autoDetectCriteria(outputText: string) {
   100% { transform: scale(1); }
 }
 
-/* === Concept Hover Card === */
-.concept-help-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: rgba(78, 168, 222, 0.15);
-  border: 1px solid rgba(78, 168, 222, 0.25);
-  color: var(--accent-blue);
-  font-size: 11px;
-  font-weight: 700;
-  cursor: help;
-  transition: all 0.15s ease;
-  margin-left: 6px;
-  vertical-align: middle;
-  position: relative;
+/* Sub section */
+.sub-section {
+  margin-bottom: 12px;
 }
 
-.concept-help-icon:hover {
-  background: var(--accent-blue);
-  color: white;
-  border-color: var(--accent-blue);
-  transform: scale(1.1);
-}
-
-.concept-hover-card {
-  position: fixed;
-  z-index: 3000;
-  background: rgba(17, 24, 39, 0.97);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(78, 168, 222, 0.3);
-  border-radius: var(--radius-md);
-  padding: 14px 16px;
-  max-width: 260px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 20px rgba(78, 168, 222, 0.1);
-  animation: fadeIn 0.15s ease;
-  pointer-events: auto;
-}
-
-.hover-card-term {
+.sub-section h4 {
   font-size: 13px;
-  font-weight: 700;
-  color: var(--accent-blue);
-  margin-bottom: 8px;
-  padding-bottom: 6px;
-  border-bottom: 1px solid rgba(78, 168, 222, 0.15);
-}
-
-.hover-card-def {
-  font-size: 12px;
-  color: var(--text-secondary);
-  line-height: 1.6;
-  margin-bottom: 8px;
-}
-
-.hover-card-formula {
-  font-size: 12px;
+  margin-bottom: 6px;
+  color: var(--text-primary);
   font-weight: 600;
-  color: var(--accent-green);
-  background: rgba(74, 222, 128, 0.08);
-  padding: 6px 10px;
-  border-radius: 4px;
-  font-family: var(--font-mono);
-  line-height: 1.5;
 }
 
-/* === Step Flow Visualization === */
+/* Doc tabs */
 /* === Compact Step Flow Bar === */
 .step-flow-bar {
   display: flex;
@@ -2304,6 +2323,15 @@ function autoDetectCriteria(outputText: string) {
     border-bottom: 1px solid var(--border-color);
   }
   .download-bar { flex-wrap: wrap; }
+  .concept-item-body {
+    padding: 0 10px 12px 28px;
+  }
+  .concept-item-header {
+    padding: 8px 10px;
+  }
+  .concept-item-header h4 {
+    font-size: 13px;
+  }
 }
 
 @media (max-width: 768px) {
@@ -2311,5 +2339,10 @@ function autoDetectCriteria(outputText: string) {
   .header-actions { flex-wrap: wrap; }
   .progress-status-bar { padding: 0 12px; }
   .download-bar { padding: 8px 12px; }
+  .concept-badge { display: none; }
+  .concept-item-header { padding: 8px 10px; }
+  .concept-item-header h4 { font-size: 13px; }
+  .concept-item-body { padding: 0 10px 10px 24px; }
+  .concept-full-def { font-size: 12px; line-height: 1.7; }
 }
 </style>
